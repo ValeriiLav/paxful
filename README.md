@@ -79,3 +79,13 @@ Config{
 		},
 	}
 ```
+
+## How to run
+unfortunatelly, this solution don't have any containerization 
+
+so, golang 1.13 should be installed
+psql server should be run
+
+to change config values you are able to modify
+paxful/cmd/main.go 
+line 140, getRunConfig function
