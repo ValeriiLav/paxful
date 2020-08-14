@@ -89,3 +89,7 @@ psql server should be run
 to change config values you are able to modify
 paxful/cmd/main.go 
 line 140, getRunConfig function
+
+curl request to test:
+curl --location --request POST 'localhost:8081' --header 'Content-Type: application/json' --data '{"currency": "eth", "amount": 10, "to":"0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7"}'
+
