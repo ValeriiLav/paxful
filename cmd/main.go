@@ -6,11 +6,13 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"io/ioutil"
 	"os"
-	"paxful/console/server"
-	"paxful/payments/paymentsbtc"
-	"paxful/payments/paymentsconfig"
-	"paxful/payments/paymentseth"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/zeebo/errs"
@@ -24,8 +26,8 @@ var Error = errs.Class("paxful payments CLI error")
 
 // Config is the global configuration to interact with paxful payment service through CLI.
 type Config struct {
-	DatabaseURL string `json:"databaseUrl"`
-	paxful.Config      `json:"config"`
+	DatabaseURL   string `json:"databaseUrl"`
+	paxful.Config `json:"config"`
 }
 
 // commands
@@ -51,11 +53,11 @@ var (
 	}
 	runCfg   Config
 	setupCfg Config
+
+	defaultConfigDir = applicationDir("paxful")
 )
 
 func init() {
-	runCfg = getRunConfig()
-	setupCfg = getSetupConfig()
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(setupCmd)
 }
@@ -70,6 +72,12 @@ func main() {
 func cmdRun(cmd *cobra.Command, args []string) (err error) {
 	ctx := context.Background()
 	log := zaplog.NewLog()
+
+	runCfg, err = readConfig()
+	if err != nil {
+		log.Error("Could not read config from default place", Error.Wrap(err))
+		return Error.Wrap(err)
+	}
 
 	db, err := paxfuldb.NewDatabase(runCfg.DatabaseURL)
 	if err != nil {
@@ -92,9 +100,39 @@ func cmdRun(cmd *cobra.Command, args []string) (err error) {
 }
 
 func cmdSetup(cmd *cobra.Command, args []string) (err error) {
-	// TODO: should also create config with default values.
 	ctx := context.Background()
 	log := zaplog.NewLog()
+
+	setupDir, err := filepath.Abs(defaultConfigDir)
+	if err != nil {
+		return Error.Wrap(err)
+	}
+
+	err = os.MkdirAll(setupDir, os.ModePerm)
+	if err != nil {
+		return Error.Wrap(err)
+	}
+
+	configFile, err := os.Create(path.Join(setupDir, "config.json"))
+	if err != nil {
+		log.Error("could not create config file", Error.Wrap(err))
+		return Error.Wrap(err)
+	}
+	defer func() {
+		err = errs.Combine(err, configFile.Close())
+	}()
+
+	jsonData, err := json.MarshalIndent(setupCfg, "", "    ")
+	if err != nil {
+		log.Error("could not marshal config", Error.Wrap(err))
+		return Error.Wrap(err)
+	}
+
+	_, err = configFile.Write(jsonData)
+	if err != nil {
+		log.Error("could not write to config", Error.Wrap(err))
+		return Error.Wrap(err)
+	}
 
 	conn, err := sql.Open("postgres", setupCfg.DatabaseURL)
 	if err != nil {
@@ -135,70 +173,51 @@ func cmdSetup(cmd *cobra.Command, args []string) (err error) {
 	return err
 }
 
-// getRunConfig reads config from specified source
-// TODO: should read from file, but i don't have enough time.
-func getRunConfig() Config {
-	return Config{
-		DatabaseURL: `
-			host = localhost
-			dbname = paxfuldb
-			port = 5432
-			user = postgres
-			password = 123456
-			connect_timeout = 2
-			sslmode = disable
-		`,
-		Config: paxful.Config{
-			Server: server.Config{
-				Address: ":8081",
-			},
-			Payments: paymentsconfig.Config{
-				CommissionPercent: 1.5,
-				Ethereum: paymentseth.Config{
-					URL:           "https://rinkeby.infura.io/v3/b6772462cc364bedbfaecd8acaf6982b",
-					PrivateKey:    "178d6c54654274d86948b1ac351eae25d8b0a19f6f9508f45ec138ed2894f13e",
-					GasLimit:      21000,
-					GasPriceInWei: 30000000000,
-				},
-				Bitcoin: paymentsbtc.Config{
-					URL:           "",
-					PrivateKey:    "",
-					GasLimit:      0,
-					GasPriceInWei: 0,
-				},
-			},
-		},
+// TODO: below functions should be placed in another place and be refactored, but i'm facing real lack of time.
+
+// applicationDir returns best base directory for specific OS.
+func applicationDir(subdir ...string) string {
+	for i := range subdir {
+		if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+			subdir[i] = strings.Title(subdir[i])
+		} else {
+			subdir[i] = strings.ToLower(subdir[i])
+		}
 	}
+	var appdir string
+	home := os.Getenv("HOME")
+
+	switch runtime.GOOS {
+	case "windows":
+		// Windows standards: https://msdn.microsoft.com/en-us/library/windows/apps/hh465094.aspx?f=255&MSPPError=-2147217396
+		for _, env := range []string{"AppData", "AppDataLocal", "UserProfile", "Home"} {
+			val := os.Getenv(env)
+			if val != "" {
+				appdir = val
+				break
+			}
+		}
+	case "darwin":
+		// Mac standards: https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/MacOSXDirectories/MacOSXDirectories.html
+		appdir = filepath.Join(home, "Library", "Application Support")
+	case "linux":
+		fallthrough
+	default:
+		// Linux standards: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+		appdir = os.Getenv("XDG_DATA_HOME")
+		if appdir == "" && home != "" {
+			appdir = filepath.Join(home, ".local", "share")
+		}
+	}
+	return filepath.Join(append([]string{appdir}, subdir...)...)
 }
 
-// getRunConfig reads config from specified source
-// TODO: should read from file, but i don't have enough time.
-func getSetupConfig() Config {
-	return Config{
-		DatabaseURL: `
-			host = localhost
-			port = 5432
-			user = postgres
-			password = 123456
-			connect_timeout = 2
-			sslmode = disable
-		`,
-		Config: paxful.Config{
-			Server: server.Config{},
-			Payments: paymentsconfig.Config{
-				Ethereum: paymentseth.Config{
-					URL:           "",
-					PrivateKey:    "",
-					GasLimit:      0,
-					GasPriceInWei: 0,
-				},
-				Bitcoin: paymentsbtc.Config{
-					URL:           "",
-					PrivateKey:    "",
-					GasLimit:      0,
-					GasPriceInWei: 0,
-				},
-			},
-		},
+// readConfig reads config from default config dir.
+func readConfig() (config Config, err error) {
+	configBytes, err := ioutil.ReadFile(path.Join(defaultConfigDir, "config.json"))
+	if err != nil {
+		return Config{}, err
 	}
+
+	return config, json.Unmarshal(configBytes, &config)
 }
