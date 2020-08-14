@@ -47,37 +47,29 @@ Here is all possible configurations for paxful payment service:
 
 ```
 // Config is the global configuration to interact with paxful payment service through CLI.
-Config{
-		DatabaseURL: `
-			host = localhost
-			dbname = paxfuldb
-			port = 5432
-			user = postgres
-			password = 123456
-			connect_timeout = 2
-			sslmode = disable
-		`,
-		Config: paxful.Config{
-			Server: server.Config{
-				Address: ":8081",
-			},
-			Payments: paymentsconfig.Config{
-				CommissionPercent: 1.5,
-				Ethereum: paymentseth.Config{
-					URL:           "https://rinkeby.infura.io/v3/b6772462cc364bedbfaecd8acaf6982b",
-					PrivateKey:    "178d6c54654274d86948b1ac351eae25d8b0a19f6f9508f45ec138ed2894f13e",
-					GasLimit:      21000,
-					GasPriceInWei: 30000000000,
-				},
-				Bitcoin: paymentsbtc.Config{
-					URL:           "",
-					PrivateKey:    "",
-					GasLimit:      0,
-					GasPriceInWei: 0,
-				},
-			},
-		},
-	}
+{
+    "databaseUrl": "your database url",
+    "config": {
+        "server": {
+            "address": ":8081"
+        },
+        "payments": {
+            "commissionPercent": 1.5,
+            "ethereum": {
+                "url": "https://rinkeby.infura.io/v3/{projectID}",
+                "privateKey": "ethereum-private-key",
+                "gasLimit": 21000,
+                "gasPriceInWei": 30000000000
+            },
+            "bitcoin": {
+                "url": "qweqw",
+                "privateKey": "qweqwe",
+                "gasLimit": 1,
+                "gasPriceInWei": 2
+            }
+        }
+    }
+}
 ```
 
 ## How to run
