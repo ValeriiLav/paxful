@@ -27,10 +27,10 @@ var Error = errs.Class("ethereum transaction error")
 
 // Config stores needed information for eth payment service initialization.
 type Config struct {
-	URL           string // "https://mainnet.infura.io"
-	PrivateKey    string
-	GasLimit      uint64
-	GasPriceInWei int64
+	URL           string `json:"url"`
+	PrivateKey    string `json:"privateKey"`
+	GasLimit      uint64 `json:"gasLimit"`
+	GasPriceInWei int64  `json:"gasPriceInWei"`
 }
 
 // transactions is an ETH implementation of paxful payment service.

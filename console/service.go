@@ -11,7 +11,7 @@ import (
 	"paxful/payments"
 )
 
-// Error is the default sno registration error.
+// Error is the default paxful payment service error.
 var (
 	Error           = errs.Class("payment console service error")
 	ValidationError = errs.Class("payment console service validation error")

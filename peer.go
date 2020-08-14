@@ -33,8 +33,8 @@ type DB interface {
 
 // Config is the global configuration for paxful payment service.
 type Config struct {
-	Server   server.Config
-	Payments paymentsconfig.Config
+	Server   server.Config         `json:"server"`
+	Payments paymentsconfig.Config `json:"payments"`
 }
 
 // Peer is the representation of a paxful payment service.
@@ -77,11 +77,11 @@ func NewPeer(log logger.Logger, db DB, config Config) (peer *Peer, err error) {
 	return peer, nil
 }
 
-// Run runs SNO registration service until it's either closed or it errors.
+// Run runs paxful payment service until it's either closed or it errors.
 func (peer *Peer) Run(ctx context.Context) error {
 	group, ctx := errgroup.WithContext(ctx)
 
-	// start SNO registration service as a separate goroutine.
+	// start paxful payment service as a separate goroutine.
 	group.Go(func() error {
 		return ignoreCancel(peer.Endpoint.Run(ctx))
 	})

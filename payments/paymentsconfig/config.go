@@ -10,7 +10,7 @@ import (
 
 // Config defines global payments config.
 type Config struct {
-	CommissionPercent float64
-	Ethereum          paymentseth.Config
-	Bitcoin           paymentsbtc.Config
+	CommissionPercent float64            `json:"commissionPercent"`
+	Ethereum          paymentseth.Config `json:"ethereum"`
+	Bitcoin           paymentsbtc.Config `json:"bitcoin"`
 }

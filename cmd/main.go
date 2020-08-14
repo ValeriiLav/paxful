@@ -24,8 +24,8 @@ var Error = errs.Class("paxful payments CLI error")
 
 // Config is the global configuration to interact with paxful payment service through CLI.
 type Config struct {
-	DatabaseURL string
-	paxful.Config
+	DatabaseURL string `json:"databaseUrl"`
+	paxful.Config      `json:"config"`
 }
 
 // commands

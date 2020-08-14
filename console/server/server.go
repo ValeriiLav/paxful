@@ -22,9 +22,9 @@ var (
 	Error = errs.Class("payment console web server error")
 )
 
-// Config contains configuration for sno registration server.
+// Config contains configuration for paxful payment http server.
 type Config struct {
-	Address string `help:"url sno registration web server" default:"127.0.0.1:8081"`
+	Address string `json:"address" help:"url paxful payments web server" default:"127.0.0.1:8081"`
 }
 
 // Server represents main admin portal http server with all endpoints.
